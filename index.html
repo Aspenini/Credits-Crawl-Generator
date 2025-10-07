@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>End Credits Crawl Generator</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #222;
+        }
+        #editor {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .category {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .category-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .category-header input {
+            flex: 1;
+            margin-right: 10px;
+            padding: 8px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .category-header button {
+            background-color: #e0e0e0;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .category-header button:hover {
+            background-color: #d0d0d0;
+        }
+        .entry {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .entry input {
+            flex: 1;
+            margin-right: 10px;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .entry button {
+            background-color: #e0e0e0;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .entry button:hover {
+            background-color: #d0d0d0;
+        }
+        #add-category, #generate-video {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 10px;
+            background-color: #444;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #add-category:hover, #generate-video:hover {
+            background-color: #333;
+        }
+        #canvas-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        #preview-canvas {
+            border: 1px solid #fff;
+        }
+        #close-preview {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #fff;
+            color: #333;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #close-preview:hover {
+            background-color: #eee;
+        }
+    </style>
+</head>
+<body>
+    <h1>End Credits Crawl Generator</h1>
+    <div id="editor">
+        <div id="categories"></div>
+        <button id="add-category">
+            <i class="material-icons">add</i> Add Category
+        </button>
+        <button id="generate-video">
+            <i class="material-icons">videocam</i> Generate Video
+        </button>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="preview-canvas" width="1920" height="1080"></canvas>
+        <button id="close-preview">
+            <i class="material-icons">close</i> Close Preview
+        </button>
+    </div>
+
+    <script>
+        const categoriesContainer = document.getElementById('categories');
+        const addCategoryBtn = document.getElementById('add-category');
+        const generateVideoBtn = document.getElementById('generate-video');
+        const canvasContainer = document.getElementById('canvas-container');
+        const previewCanvas = document.getElementById('preview-canvas');
+        const closePreviewBtn = document.getElementById('close-preview');
+        const ctx = previewCanvas.getContext('2d');
+
+        let categories = [];
+
+        function createCategory() {
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'category';
+
+            const header = document.createElement('div');
+            header.className = 'category-header';
+
+            const categoryInput = document.createElement('input');
+            categoryInput.type = 'text';
+            categoryInput.placeholder = 'Category Name (e.g., Audio Production Team)';
+            header.appendChild(categoryInput);
+
+            const removeCategoryBtn = document.createElement('button');
+            removeCategoryBtn.innerHTML = '<i class="material-icons">delete</i>';
+            removeCategoryBtn.onclick = () => {
+                categoriesContainer.removeChild(categoryDiv);
+                categories = categories.filter(cat => cat !== categoryDiv);
+            };
+            header.appendChild(removeCategoryBtn);
+
+            const entriesDiv = document.createElement('div');
+            entriesDiv.className = 'entries';
+
+            const addEntryBtn = document.createElement('button');
+            addEntryBtn.innerHTML = '<i class="material-icons">add</i> Add Name/Title';
+            addEntryBtn.onclick = () => createEntry(entriesDiv);
+
+            categoryDiv.appendChild(header);
+            categoryDiv.appendChild(entriesDiv);
+            categoryDiv.appendChild(addEntryBtn);
+
+            categoriesContainer.appendChild(categoryDiv);
+            categories.push(categoryDiv);
+
+            createEntry(entriesDiv); // Add one entry by default
+        }
+
+        function createEntry(entriesDiv) {
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'entry';
+
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.placeholder = 'Name';
+            entryDiv.appendChild(nameInput);
+
+            const titleInput = document.createElement('input');
+            titleInput.type = 'text';
+            titleInput.placeholder = 'Title';
+            entryDiv.appendChild(titleInput);
+
+            const removeEntryBtn = document.createElement('button');
+            removeEntryBtn.innerHTML = '<i class="material-icons">delete</i>';
+            removeEntryBtn.onclick = () => entriesDiv.removeChild(entryDiv);
+            entryDiv.appendChild(removeEntryBtn);
+
+            entriesDiv.appendChild(entryDiv);
+        }
+
+        addCategoryBtn.onclick = createCategory;
+
+        generateVideoBtn.onclick = () => {
+            const creditsData = [];
+            categories.forEach(categoryDiv => {
+                const categoryName = categoryDiv.querySelector('.category-header input').value.trim();
+                if (categoryName) {
+                    creditsData.push({ type: 'category', text: categoryName });
+                    const entries = categoryDiv.querySelectorAll('.entry');
+                    entries.forEach(entry => {
+                        const name = entry.querySelector('input:nth-child(1)').value.trim();
+                        const title = entry.querySelector('input:nth-child(2)').value.trim();
+                        if (name && title) {
+                            creditsData.push({ type: 'entry', name, title });
+                        }
+                    });
+                }
+            });
+
+            if (creditsData.length === 0) {
+                alert('Please add some categories and entries.');
+                return;
+            }
+
+            canvasContainer.style.display = 'flex';
+            animateCredits(creditsData);
+        };
+
+        closePreviewBtn.onclick = () => {
+            canvasContainer.style.display = 'none';
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+        };
+
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        function animateCredits(data) {
+            const width = 1920;
+            const height = 1080;
+            const fontSizeCategory = 60;
+            const fontSizeEntry = 40;
+            const lineHeight = 80;
+            const scrollSpeed = 2; // pixels per frame
+            let yOffset = height; // Start from bottom
+
+            // Calculate total height needed
+            let totalHeight = 0;
+            data.forEach(item => {
+                if (item.type === 'category') {
+                    totalHeight += lineHeight * 2; // Extra space for category
+                } else {
+                    totalHeight += lineHeight;
+                }
+            });
+            totalHeight += height; // Extra to scroll off screen
+
+            ctx.font = `${fontSizeCategory}px Arial`;
+            const stream = previewCanvas.captureStream(30); // 30 fps
+            mediaRecorder = new MediaRecorder(stream);
+            recordedChunks = [];
+
+            mediaRecorder.ondataavailable = event => {
+                recordedChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'credits-crawl.webm';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+            };
+
+            mediaRecorder.start();
+
+            function drawFrame() {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, width, height);
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+
+                let currentY = yOffset;
+                data.forEach(item => {
+                    if (item.type === 'category') {
+                        ctx.font = `${fontSizeCategory}px Arial`;
+                        ctx.fillText(item.text, width / 2, currentY);
+                        currentY += lineHeight * 2;
+                    } else {
+                        ctx.font = `${fontSizeEntry}px Arial`;
+                        ctx.fillText(`${item.name} - ${item.title}`, width / 2, currentY);
+                        currentY += lineHeight;
+                    }
+                });
+
+                yOffset -= scrollSpeed;
+
+                if (yOffset > -totalHeight) {
+                    requestAnimationFrame(drawFrame);
+                } else {
+                    mediaRecorder.stop();
+                }
+            }
+
+            drawFrame();
+        }
+    </script>
+</body>
+</html>
